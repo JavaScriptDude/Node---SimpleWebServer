@@ -36,54 +36,59 @@ function _exit(s, iCode){
 function my_web_server(req, res) { 
     let body = [];
 
-    req.on('error', (err) => { console.error(err) })
-    req.on('data', (chunk) => { body.push(chunk); })
-    req.on('end', () => {
-        body = Buffer.concat(body).toString();
+    setTimeout(_do_work, 1)
 
-        var is_json=false, json_ok=false, json_err=null
- 
-        console.log('--------------------------------------------------')
-        console.log(`${dayjs().format('YYmmDD-HHMMss')} - ${req.method} -> ${req.url}`)
-        console.log(`headers:\n${dump_headers(req)}`)
-        if ('content-type' in req.headers && req.headers['content-type'].toLowerCase() == 'application/json'){
-            // Try parsing body as json
-            try {
-                data = JSON.parse(body)
-                console.log(`data:\n${util.inspect(data, true, 4)}\n`)
-                is_json = true
-                json_ok = true
-            } catch(ex) {
-                json_err = ex.message
-                console.log(`json parse failed: ${json_err}`)
-                console.log(`body:\n${body}\n`)
-            }
+    function _do_work(){
 
-        } else {
-            if (body.trim() == '')
-                console.log(`body: (none)`)
-            else
-                console.log(`body:\n${body}\n`)
-        }
-        console.log(`END - HTTP ${req.method} -> ${req.url}`)
-        console.log('--------------------------------------------------\n')
-        try {
-            if (is_json){
-                res.setHeader('Content-Type', 'application/json');
-                if (json_ok){
-                    res.write(`{"success": true}`)
-                } else {
-                    res.write(`{"success": false, "reason": ${json_err}}`)
+        req.on('error', (err) => { console.error(err) })
+        req.on('data', (chunk) => { body.push(chunk); })
+        req.on('end', () => {
+            body = Buffer.concat(body).toString();
+
+            var is_json=false, json_ok=false, json_err=null
+    
+            console.log('--------------------------------------------------')
+            console.log(`${dayjs().format('YYmmDD-HHMMss.SSS')} - ${req.method} -> ${req.url}`)
+            console.log(`HEADERS:\n${dump_headers(req)}`)
+            if ('content-type' in req.headers && req.headers['content-type'].toLowerCase() == 'application/json'){
+                // Try parsing body as json
+                try {
+                    data = JSON.parse(body)
+                    console.log(`DATA:\n  ${util.inspect(data, true, 4).replace('\n', '\n  ')}`)
+                    is_json = true
+                    json_ok = true
+                } catch(ex) {
+                    json_err = ex.message
+                    console.log(`JSON parse failed: ${json_err}`)
+                    console.log(`BODY:\n  ${body.replace('\n', '\n  ')}`)
                 }
-            } else{
-                res.write(`url called = ${req.url}`)
+
+            } else {
+                if (body.trim() == '')
+                    console.log(`BODY: (none)`)
+                else
+                    console.log(`BODY:\n  ${body.replace('\n', '\n  ')}`)
             }
-        }catch(ex){
-            console.error("Failed while writing response", ex)
-        } finally {
-            res.end()
-        }
-    });
+            console.log(`${dayjs().format('YYmmDD-HHMMss.SSS')} - END - ${req.method} -> ${req.url}`)
+            console.log('--------------------------------------------------\n')
+            try {
+                if (is_json){
+                    res.setHeader('Content-Type', 'application/json');
+                    if (json_ok){
+                        res.write(`{"success": true}`)
+                    } else {
+                        res.write(`{"success": false, "reason": ${json_err}}`)
+                    }
+                } else{
+                    res.write(`url called = ${req.url}`)
+                }
+            }catch(ex){
+                console.error("Failed while writing response", ex)
+            } finally {
+                res.end()
+            }
+        });
+    }
 }
 
 function dump_headers(req){
