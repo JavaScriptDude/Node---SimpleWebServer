@@ -8,13 +8,14 @@
 // % printf "GET <path> HTTP/1.0\r\n\r\n" | nc <host> <port>
 // -or-
 // % curl -v -I --insecure <url> 2>&1 | egrep -v '^> |^< |^{|^}|^* T|^* AL|^  0'
-// 
+// Home: https://github.com/JavaScriptDude/Node-SimpleWebServer
 
 const { exception } = require('console');
-var http = require('http');
-var https = require('https');
-var util = require('util');
-var table = require('text-table');
+const http = require('http');
+const https = require('https');
+const util = require('util');
+const table = require('text-table');
+const dayjs = require('dayjs');
 
 function _usage(s, iCode){
     _exit(
@@ -40,28 +41,48 @@ function my_web_server(req, res) {
     req.on('end', () => {
         body = Buffer.concat(body).toString();
 
-
+        var is_json=false, json_ok=false, json_err=null
  
         console.log('--------------------------------------------------')
-        console.log(`Called - HTTP ${req.method} -> ${req.url}`)
+        console.log(`${dayjs().format('YYmmDD-HHMMss')} - ${req.method} -> ${req.url}`)
         console.log(`headers:\n${dump_headers(req)}`)
         if ('content-type' in req.headers && req.headers['content-type'].toLowerCase() == 'application/json'){
             // Try parsing body as json
             try {
                 data = JSON.parse(body)
                 console.log(`data:\n${util.inspect(data, true, 4)}\n`)
+                is_json = true
+                json_ok = true
             } catch(ex) {
-                console.log(`json parse failed: ${ex.message}`)
+                json_err = ex.message
+                console.log(`json parse failed: ${json_err}`)
                 console.log(`body:\n${body}\n`)
             }
 
         } else {
-            console.log(`body:\n${body}\n`)
+            if (body.trim() == '')
+                console.log(`body: (none)`)
+            else
+                console.log(`body:\n${body}\n`)
         }
         console.log(`END - HTTP ${req.method} -> ${req.url}`)
-        console.log('--------------------------------------------------')
-        res.write(`url called = ${req.url}`)
-        res.end()
+        console.log('--------------------------------------------------\n')
+        try {
+            if (is_json){
+                res.setHeader('Content-Type', 'application/json');
+                if (json_ok){
+                    res.write(`{"success": true}`)
+                } else {
+                    res.write(`{"success": false, "reason": ${json_err}}`)
+                }
+            } else{
+                res.write(`url called = ${req.url}`)
+            }
+        }catch(ex){
+            console.error("Failed while writing response", ex)
+        } finally {
+            res.end()
+        }
     });
 }
 
